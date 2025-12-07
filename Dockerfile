@@ -1,33 +1,25 @@
-# -----------------------------
-# Stage 1: Build the JAR
-# -----------------------------
-FROM maven:3.9.6-eclipse-temurin-17 AS build
+# Use Java 17 JDK + Maven installed for building
+FROM maven:3.9.6-eclipse-temurin-17
 
-# Set working directory
+# Set working directory inside container
 WORKDIR /app
 
-# Copy pom.xml and download dependencies (offline)
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
+# Copy all project files into the container
+COPY . .
 
-# Copy source code
-COPY src ./src
-
-# Build the Spring Boot JAR (skip tests for faster build)
+# Build the Spring Boot jar using Maven (skip tests for faster build)
 RUN mvn clean package -DskipTests
 
-# -----------------------------
-# Stage 2: Run the JAR
-# -----------------------------
+# Use Java 21 runtime for running the app
 FROM eclipse-temurin:21-jdk-alpine
 
 WORKDIR /app
 
-# Copy the JAR built in previous stage
-COPY --from=build /app/target/*.jar app.jar
+# Copy the built jar from the previous stage
+COPY --from=0 /app/target/*.jar app.jar
 
-# Expose default Spring Boot port
+# Expose port 8080 for the app
 EXPOSE 8080
 
-# Run the application
-ENTRYPOINT ["java","-jar","app.jar"]
+# Start the Spring Boot app
+ENTRYPOINT ["java", "-jar", "app.jar"]
